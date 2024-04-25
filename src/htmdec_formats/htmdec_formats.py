@@ -1,6 +1,8 @@
 """Main module."""
 
 import sys
+from typing import Mapping
+import itertools
 
 try:
     from .ksy_files.nmdfile import Nmdfile
@@ -10,33 +12,314 @@ except ImportError as e:
     print("Please run 'make install' to install the necessary dependencies.")
     sys.exit(1)
 
+import dataclasses
 import pandas as pd
 import numpy as np
 import xml.etree.ElementTree as ET
+import base64
 
 
 class IndenterDataset:
     nmd_file: Nmdfile
-    buffers: dict[str, np.ndarray]
-    _xml_tree: ET.Element
+    _xml_tree: ET.ElementTree
+    result_vars: dict[str, "IndenterVar"]
+    tests: list["IndenterTest"]
 
     def __init__(self, nmd_file: Nmdfile):
         self.nmd_file = nmd_file
-        self._xml_tree = ET.fromstring(nmd_file.xml.contents)
-        self._load_buffers()
+        self._load_xml()
+        self._load_tests()
 
-    def _load_buffers(self):
-        self.buffers = {}
-        for i, seq in enumerate(self.nmd_file.data.variables):
-            self.buffers[f"seq_{i:04d}"] = np.frombuffer(seq.values, dtype="<f8")
+    def _load_xml(self):
+        self._xml_tree = ET.ElementTree(ET.fromstring(self.nmd_file.xml.contents))
+        results = {}
+        for result in self._xml_tree.findall("RESULTS/Result") or []:
+            stats = base64.b64decode(result.attrib["STATISTICS"])
+            accum = base64.b64decode(result.attrib["ACCUMULATOR"])
+            results[result.attrib["NAME"]] = {
+                "statistics": np.frombuffer(stats, dtype="f8"),
+                "accumulator": np.frombuffer(accum, dtype="f8"),
+            }
+        result_vars = {}
+        for var in self._xml_tree.find("RESULTS/VarList") or []:
+            attrib = var.attrib.copy()
+            attrib["ACCUMULATOR"] = results[var.attrib["NAME"]]["accumulator"]
+            attrib["STATISTICS"] = results[var.attrib["NAME"]]["statistics"]
+            result_vars[attrib["NAME"]] = cast_to_dataclass(IndenterVar, attrib)
+        self.result_vars = result_vars
+
+    def _load_tests(self):
+        buffers = []
+        for seq in self.nmd_file.data.variables:
+            buffers.append(np.frombuffer(seq.values, dtype="<f8"))
+        self.tests = []
+        for test in self._xml_tree.findall("TEST"):
+            self.tests.append(IndenterTest(test, buffers))
 
     @staticmethod
     def from_filename(filename: str) -> "IndenterDataset":
         """Creates an IndenterDataset object from a .nmd file."""
-        nmd: Nmdfile = Nmdfile.from_file(filename)
+        with open(filename, "rb") as f:
+            filebytes = f.read()
+        nmd: Nmdfile = Nmdfile.from_bytes(filebytes)
         return IndenterDataset(nmd)
 
     def to_df(self) -> pd.DataFrame:
         """Converts a .nmd file to a pandas DataFrame."""
         df: pd.DataFrame = pd.DataFrame(self.buffers)
         return df
+
+
+class IndenterTest:
+    start_time: str
+    unique_id: str
+    inputs: dict[str, "IndenterTestInput"]
+    calculations: dict[str, "IndenterCalculation"]
+    syschannels: dict[str, "IndenterSyschannel"]
+    channels: dict[str, "IndenterChannel"]
+    xml_subtree: ET.Element
+    arrays: dict[str, np.ndarray]
+
+    def __init__(self, test_xml_subtree: ET.Element, buffers: list[np.ndarray]):
+        self.start_time = test_xml_subtree.attrib["STARTTIME"]
+        self.unique_id = test_xml_subtree.attrib["UNIQUEID"]
+        self.xml_subtree = test_xml_subtree
+        self.inputs = self._parse_element_type("INPUT", IndenterTestInput)
+        self.calculations = self._parse_element_type("CALCULATION", IndenterCalculation)
+        self.syschannels = self._parse_element_type("SYSCHANNEL", IndenterSyschannel)
+        self.channels = self._parse_element_type("CHANNEL", IndenterChannel)
+        data_index_values = {}
+        for key, value in self.syschannels.items():
+            if value.dataindex != -1:
+                data_index_values[value.dataindex] = key
+        for key, value in self.channels.items():
+            if value.dataindex != -1:
+                data_index_values[value.dataindex] = key
+        self.arrays = {}
+        for i in sorted(data_index_values.keys()):
+            self.arrays[data_index_values[i]] = buffers.pop(0)
+
+    def get_fields(self):
+        return list(
+            itertools.chain(
+                self.inputs, self.calculations, self.syschannels, self.channels
+            )
+        )
+
+    def get_field(self, key):
+        if key in self.inputs:
+            return self.inputs[key]
+        elif key in self.calculations:
+            return self.calculations[key]
+        elif key in self.syschannels:
+            return self.syschannels[key]
+        elif key in self.channels:
+            return self.channels[key]
+        else:
+            raise KeyError(key)
+
+    def _parse_element_type(self, etype: str, cls: type):
+        result = {}
+        for el in self.xml_subtree.findall(etype) or []:
+            result[el.attrib["NAME"]] = cast_to_dataclass(cls, el.attrib)
+        return result
+
+    def __getitem__(self, key):
+        return self.arrays[key]
+
+    def __contains__(self, key):
+        return key in self.arrays
+
+    def __iter__(self):
+        return iter(self.arrays)
+
+    def __len__(self):
+        return len(self.arrays)
+
+    def keys(self):
+        return self.arrays.keys()
+
+    def values(self):
+        return self.arrays.values()
+
+    def items(self):
+        return self.arrays.items()
+
+
+def cast_to_dataclass(cls, attrib: Mapping[str, str | float | bool | int]):
+    new_attrib = {}
+    for field in dataclasses.fields(cls):
+        value = attrib[field.name.upper()]
+        if not isinstance(value, field.type):
+            value = field.type(value)
+        new_attrib[field.name] = value
+    return cls(**new_attrib)
+
+
+@dataclasses.dataclass
+class IndenterVar:
+    name: str
+    displayname: str
+    formula: str
+    decimals: int
+    notation: str
+    unitclass: str
+    unittype: int
+    defaultvalue: float
+    minimumvalue: float
+    maximumvalue: float
+    defaultvaluei50: float
+    minimumvaluei50: float
+    maximumvaluei50: float
+    defaultvaluei1k: float
+    minimumvaluei1k: float
+    maximumvaluei1k: float
+    defaultvaluexp: float
+    minimumvaluexp: float
+    maximumvaluexp: float
+    hasminimum: bool
+    hasmaximum: bool
+    actuatorspecific: bool
+    canedit: bool
+    doublevalue: float
+    when: int
+    reset: bool
+    visibletoui: bool
+    documentation: str
+    stringvalue: str
+    accumulator: np.ndarray
+    statistics: np.ndarray
+
+
+@dataclasses.dataclass
+class IndenterTestInput:
+    name: str
+    displayname: str
+    formula: str
+    decimals: int
+    notation: str
+    unitclass: str
+    unittype: int
+    defaultvalue: float
+    minimumvalue: float
+    maximumvalue: float
+    defaultvaluei50: float
+    minimumvaluei50: float
+    maximumvaluei50: float
+    defaultvaluei1k: float
+    minimumvaluei1k: float
+    maximumvaluei1k: float
+    defaultvaluexp: float
+    minimumvaluexp: float
+    maximumvaluexp: float
+    hasminimum: bool
+    hasmaximum: bool
+    actuatorspecific: bool
+    canedit: bool
+    doublevalue: float
+    when: int
+    reset: bool
+    visibletoui: bool
+    documentation: str
+    stringvalue: str
+
+
+@dataclasses.dataclass
+class IndenterCalculation:
+    name: str
+    displayname: str
+    formula: str
+    decimals: int
+    notation: str
+    unitclass: str
+    unittype: int
+    defaultvalue: float
+    minimumvalue: float
+    maximumvalue: float
+    defaultvaluei50: float
+    minimumvaluei50: float
+    maximumvaluei50: float
+    defaultvaluei1k: float
+    minimumvaluei1k: float
+    maximumvaluei1k: float
+    defaultvaluexp: float
+    minimumvaluexp: float
+    maximumvaluexp: float
+    hasminimum: bool
+    hasmaximum: bool
+    actuatorspecific: bool
+    canedit: bool
+    doublevalue: float
+    when: int
+    reset: bool
+    visibletoui: bool
+    documentation: str
+    stringvalue: str
+
+
+@dataclasses.dataclass
+class IndenterSyschannel:
+    name: str
+    displayname: str
+    formula: str
+    decimals: int
+    notation: str
+    unitclass: str
+    unittype: int
+    defaultvalue: float
+    minimumvalue: float
+    maximumvalue: float
+    defaultvaluei50: float
+    minimumvaluei50: float
+    maximumvaluei50: float
+    defaultvaluei1k: float
+    minimumvaluei1k: float
+    maximumvaluei1k: float
+    defaultvaluexp: float
+    minimumvaluexp: float
+    maximumvaluexp: float
+    hasminimum: bool
+    hasmaximum: bool
+    actuatorspecific: bool
+    canedit: bool
+    doublevalue: float
+    when: int
+    reset: bool
+    visibletoui: bool
+    documentation: str
+    stringvalue: str
+    dataindex: int = -1
+
+
+@dataclasses.dataclass
+class IndenterChannel:
+    name: str
+    displayname: str
+    formula: str
+    decimals: int
+    notation: str
+    unitclass: str
+    unittype: int
+    defaultvalue: float
+    minimumvalue: float
+    maximumvalue: float
+    defaultvaluei50: float
+    minimumvaluei50: float
+    maximumvaluei50: float
+    defaultvaluei1k: float
+    minimumvaluei1k: float
+    maximumvaluei1k: float
+    defaultvaluexp: float
+    minimumvaluexp: float
+    maximumvaluexp: float
+    hasminimum: bool
+    hasmaximum: bool
+    actuatorspecific: bool
+    canedit: bool
+    doublevalue: float
+    when: int
+    reset: bool
+    visibletoui: bool
+    documentation: str
+    stringvalue: str
+    dataindex: int = -1
