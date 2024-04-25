@@ -1,5 +1,5 @@
 meta:
-  id: xls
+  id: simple_xls
   file-extension: xls
   endian: le
 seq:
