@@ -12,7 +12,14 @@ except ImportError as e:
     print("Please run 'make install' to install the necessary dependencies.")
     sys.exit(1)
 
-import dataclasses
+from .indenter_types import (
+    IndenterVar,
+    IndenterTestInput,
+    IndenterCalculation,
+    IndenterSyschannel,
+    IndenterChannel,
+    cast_to_dataclass,
+)
 import pandas as pd
 import numpy as np
 import xml.etree.ElementTree as ET
@@ -73,10 +80,10 @@ class IndenterDataset:
 class IndenterTest:
     start_time: str
     unique_id: str
-    inputs: dict[str, "IndenterTestInput"]
-    calculations: dict[str, "IndenterCalculation"]
-    syschannels: dict[str, "IndenterSyschannel"]
-    channels: dict[str, "IndenterChannel"]
+    inputs: dict[str, IndenterTestInput]
+    calculations: dict[str, IndenterCalculation]
+    syschannels: dict[str, IndenterSyschannel]
+    channels: dict[str, IndenterChannel]
     xml_subtree: ET.Element
     arrays: dict[str, np.ndarray]
 
@@ -106,7 +113,9 @@ class IndenterTest:
             )
         )
 
-    def get_field(self, key):
+    def get_field(
+        self, key
+    ) -> IndenterTestInput | IndenterCalculation | IndenterSyschannel | IndenterChannel:
         if key in self.inputs:
             return self.inputs[key]
         elif key in self.calculations:
@@ -117,6 +126,9 @@ class IndenterTest:
             return self.channels[key]
         else:
             raise KeyError(key)
+
+    def to_df(self) -> pd.DataFrame:
+        return pd.DataFrame(self.arrays)
 
     def _parse_element_type(self, etype: str, cls: type):
         result = {}
@@ -144,182 +156,3 @@ class IndenterTest:
 
     def items(self):
         return self.arrays.items()
-
-
-def cast_to_dataclass(cls, attrib: Mapping[str, str | float | bool | int]):
-    new_attrib = {}
-    for field in dataclasses.fields(cls):
-        value = attrib[field.name.upper()]
-        if not isinstance(value, field.type):
-            value = field.type(value)
-        new_attrib[field.name] = value
-    return cls(**new_attrib)
-
-
-@dataclasses.dataclass
-class IndenterVar:
-    name: str
-    displayname: str
-    formula: str
-    decimals: int
-    notation: str
-    unitclass: str
-    unittype: int
-    defaultvalue: float
-    minimumvalue: float
-    maximumvalue: float
-    defaultvaluei50: float
-    minimumvaluei50: float
-    maximumvaluei50: float
-    defaultvaluei1k: float
-    minimumvaluei1k: float
-    maximumvaluei1k: float
-    defaultvaluexp: float
-    minimumvaluexp: float
-    maximumvaluexp: float
-    hasminimum: bool
-    hasmaximum: bool
-    actuatorspecific: bool
-    canedit: bool
-    doublevalue: float
-    when: int
-    reset: bool
-    visibletoui: bool
-    documentation: str
-    stringvalue: str
-    accumulator: np.ndarray
-    statistics: np.ndarray
-
-
-@dataclasses.dataclass
-class IndenterTestInput:
-    name: str
-    displayname: str
-    formula: str
-    decimals: int
-    notation: str
-    unitclass: str
-    unittype: int
-    defaultvalue: float
-    minimumvalue: float
-    maximumvalue: float
-    defaultvaluei50: float
-    minimumvaluei50: float
-    maximumvaluei50: float
-    defaultvaluei1k: float
-    minimumvaluei1k: float
-    maximumvaluei1k: float
-    defaultvaluexp: float
-    minimumvaluexp: float
-    maximumvaluexp: float
-    hasminimum: bool
-    hasmaximum: bool
-    actuatorspecific: bool
-    canedit: bool
-    doublevalue: float
-    when: int
-    reset: bool
-    visibletoui: bool
-    documentation: str
-    stringvalue: str
-
-
-@dataclasses.dataclass
-class IndenterCalculation:
-    name: str
-    displayname: str
-    formula: str
-    decimals: int
-    notation: str
-    unitclass: str
-    unittype: int
-    defaultvalue: float
-    minimumvalue: float
-    maximumvalue: float
-    defaultvaluei50: float
-    minimumvaluei50: float
-    maximumvaluei50: float
-    defaultvaluei1k: float
-    minimumvaluei1k: float
-    maximumvaluei1k: float
-    defaultvaluexp: float
-    minimumvaluexp: float
-    maximumvaluexp: float
-    hasminimum: bool
-    hasmaximum: bool
-    actuatorspecific: bool
-    canedit: bool
-    doublevalue: float
-    when: int
-    reset: bool
-    visibletoui: bool
-    documentation: str
-    stringvalue: str
-
-
-@dataclasses.dataclass
-class IndenterSyschannel:
-    name: str
-    displayname: str
-    formula: str
-    decimals: int
-    notation: str
-    unitclass: str
-    unittype: int
-    defaultvalue: float
-    minimumvalue: float
-    maximumvalue: float
-    defaultvaluei50: float
-    minimumvaluei50: float
-    maximumvaluei50: float
-    defaultvaluei1k: float
-    minimumvaluei1k: float
-    maximumvaluei1k: float
-    defaultvaluexp: float
-    minimumvaluexp: float
-    maximumvaluexp: float
-    hasminimum: bool
-    hasmaximum: bool
-    actuatorspecific: bool
-    canedit: bool
-    doublevalue: float
-    when: int
-    reset: bool
-    visibletoui: bool
-    documentation: str
-    stringvalue: str
-    dataindex: int = -1
-
-
-@dataclasses.dataclass
-class IndenterChannel:
-    name: str
-    displayname: str
-    formula: str
-    decimals: int
-    notation: str
-    unitclass: str
-    unittype: int
-    defaultvalue: float
-    minimumvalue: float
-    maximumvalue: float
-    defaultvaluei50: float
-    minimumvaluei50: float
-    maximumvaluei50: float
-    defaultvaluei1k: float
-    minimumvaluei1k: float
-    maximumvaluei1k: float
-    defaultvaluexp: float
-    minimumvaluexp: float
-    maximumvaluexp: float
-    hasminimum: bool
-    hasmaximum: bool
-    actuatorspecific: bool
-    canedit: bool
-    doublevalue: float
-    when: int
-    reset: bool
-    visibletoui: bool
-    documentation: str
-    stringvalue: str
-    dataindex: int = -1
