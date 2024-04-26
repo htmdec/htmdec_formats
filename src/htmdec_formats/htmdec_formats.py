@@ -18,6 +18,8 @@ from .indenter_types import (
     IndenterCalculation,
     IndenterSyschannel,
     IndenterChannel,
+    IndenterChannelBins,
+    IndenterSample,
     cast_to_dataclass,
 )
 import pandas as pd
@@ -31,11 +33,21 @@ class IndenterDataset:
     _xml_tree: ET.ElementTree
     result_vars: dict[str, "IndenterVar"]
     tests: list["IndenterTest"]
+    metadata: IndenterSample
+    sample_summary: "IndenterSampleSummary"
 
     def __init__(self, nmd_file: Nmdfile):
         self.nmd_file = nmd_file
         self._load_xml()
         self._load_tests()
+        if self._xml_tree.find("Sample") is not None:
+            self.metadata = cast_to_dataclass(
+                IndenterSample, self._xml_tree.find("Sample").attrib
+            )
+        if self._xml_tree.find("SAMPLESUMMARY") is not None:
+            self.sample_summary = IndenterSampleSummary(
+                self._xml_tree.find("SAMPLESUMMARY")
+            )
 
     def _load_xml(self):
         self._xml_tree = ET.ElementTree(ET.fromstring(self.nmd_file.xml.contents))
@@ -72,9 +84,35 @@ class IndenterDataset:
         return IndenterDataset(nmd)
 
     def to_df(self) -> pd.DataFrame:
-        """Converts a .nmd file to a pandas DataFrame."""
-        df: pd.DataFrame = pd.DataFrame(self.buffers)
-        return df
+        """Converts a .nmd file to a pandas DataFrame, including all test runs."""
+        return pd.concat([test.to_df() for test in self.tests], axis=1)
+
+    def to_csv(self, filename: str):
+        self.to_df().to_csv(filename)
+
+
+class IndenterSampleSummary:
+    startmarkername: str
+    endmarkername: str
+    normchanname: str
+    channels: dict[str, IndenterChannelBins]
+
+    def __init__(self, sample_xml_subtree: ET.Element):
+        self.startmarkername = sample_xml_subtree.attrib["STARTMARKERNAME"]
+        self.endmarkername = sample_xml_subtree.attrib["ENDMARKERNAME"]
+        self.normchanname = sample_xml_subtree.attrib["NORMCHANNAME"]
+        self.channels = {}
+        for channel in sample_xml_subtree.findall("Channels/Channel") or []:
+            bins = []
+            for bin in channel.findall("Bins/Bin") or []:
+                b = base64.b64decode(bin.attrib["VALUE"])
+                bins.append(np.frombuffer(b, dtype="f8"))
+            bins = np.array(bins)
+            attrib = channel.attrib.copy()
+            attrib["BINS"] = bins
+            self.channels[attrib["NAME"]] = cast_to_dataclass(
+                IndenterChannelBins, attrib
+            )
 
 
 class IndenterTest:
@@ -113,6 +151,22 @@ class IndenterTest:
             )
         )
 
+    def get_inputs(self):
+        df = pd.DataFrame(self.inputs.values()).set_index("name")
+        return df
+
+    def get_channels(self):
+        df = pd.DataFrame(self.channels.values()).set_index("name")
+        return df
+
+    def get_syschannels(self):
+        df = pd.DataFrame(self.syschannels.values()).set_index("name")
+        return df
+
+    def get_calculations(self):
+        df = pd.DataFrame(self.calculations.values()).set_index("name")
+        return df
+
     def get_field(
         self, key
     ) -> IndenterTestInput | IndenterCalculation | IndenterSyschannel | IndenterChannel:
@@ -129,6 +183,9 @@ class IndenterTest:
 
     def to_df(self) -> pd.DataFrame:
         return pd.DataFrame(self.arrays)
+
+    def to_csv(self, filename: str):
+        self.to_df().to_csv(filename)
 
     def _parse_element_type(self, etype: str, cls: type):
         result = {}
