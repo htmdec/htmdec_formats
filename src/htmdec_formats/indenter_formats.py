@@ -185,7 +185,7 @@ class IndenterTest:
         return pd.DataFrame(self.arrays)
 
     def to_csv(self, filename: str):
-        self.to_df().to_csv(filename)
+        self.to_df().to_csv(filename, index=False)
 
     def _parse_element_type(self, etype: str, cls: type):
         result = {}
