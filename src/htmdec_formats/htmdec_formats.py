@@ -1,7 +1,7 @@
 """Main module."""
 
 import sys
-from typing import Mapping
+from typing import Iterable
 import itertools
 
 try:
@@ -72,9 +72,15 @@ class IndenterDataset:
         return IndenterDataset(nmd)
 
     def to_df(self) -> pd.DataFrame:
-        """Converts a .nmd file to a pandas DataFrame."""
-        df: pd.DataFrame = pd.DataFrame(self.buffers)
-        return df
+        """Converts a .nmd file to a concatenated set of pandas DataFrames."""
+        tests = []
+        for i, test in enumerate(self.tests):
+            test_df = test.to_df()
+            test_df.insert(0, "TEST_NUM", i)
+            test_df.insert(1, "UNIQUEID", test.unique_id)
+            test_df.insert(2, "STARTTIME", test.start_time)
+            tests.append(test_df)
+        return pd.concat(tests)
 
 
 class IndenterTest:
