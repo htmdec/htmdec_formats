@@ -5,7 +5,7 @@ from typing import Mapping
 import itertools
 
 try:
-    from .ksy_files.nmdfile import Nmdfile
+    from .ksy_files.nmdfile import Nmdfile as KaitaiNmdfile
     from .ksy_files.simple_xls import SimpleXls
 except ImportError as e:
     print(f"Error: {e}")
@@ -26,6 +26,38 @@ import pandas as pd
 import numpy as np
 import xml.etree.ElementTree as ET
 import base64
+
+
+class XmlDummy:
+    def __init__(self, contents: str):
+        self.contents = contents
+
+
+_DELIM_START = b"<SAMPLE"
+_DELIM_END = b"</SAMPLE>"
+
+
+class Nmdfile:
+    # We are re-implementing this without using Kaitai so that we can improve
+    # performance.  The kaitai wrapper was, and is, very useful.  However, with
+    # our specific use case, where we rely on a delimiter to find the end of the
+    # XML portion, it conducts a progressive "+=" concatenation to construct the
+    # string.  For very long strings, like we have, this becomes extremely slow.
+    def __init__(self, filename: str):
+        # We will read the whole file into memory
+        with open(filename, "rb") as f:
+            file_contents = f.read()
+        xml_start = file_contents.find(_DELIM_START)
+        xml_end = file_contents.rfind(_DELIM_END) + len(_DELIM_END)
+        self.unk = file_contents[837 * 4 : xml_start]
+        self.xml = XmlDummy(file_contents[xml_start:xml_end].decode("utf-8"))
+        assert file_contents[xml_end + 2 : xml_end + 4] == b"\x00\x00"
+
+        self.data = KaitaiNmdfile.Datasets.from_bytes(file_contents[xml_end:])
+
+    @classmethod
+    def from_filename(cls, filename: str) -> "Nmdfile":
+        return cls(filename)
 
 
 class IndenterDataset:
@@ -78,9 +110,7 @@ class IndenterDataset:
     @staticmethod
     def from_filename(filename: str) -> "IndenterDataset":
         """Creates an IndenterDataset object from a .nmd file."""
-        with open(filename, "rb") as f:
-            filebytes = f.read()
-        nmd: Nmdfile = Nmdfile.from_bytes(filebytes)
+        nmd: Nmdfile = Nmdfile.from_filename(filename)
         return IndenterDataset(nmd)
 
     def to_df(self) -> pd.DataFrame:
