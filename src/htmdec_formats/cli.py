@@ -22,8 +22,7 @@ def main():
 def nmd_to_csv(nmdfile: str, outfile: str):
     """Convert an NMD file to a CSV file."""
     dataset = htmdec_formats.IndenterDataset.from_filename(nmdfile)
-    for test in dataset.tests:
-        test.to_csv(outfile)
+    dataset.to_csv(outfile)
 
 
 if __name__ == "__main__":

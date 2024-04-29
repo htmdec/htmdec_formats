@@ -115,10 +115,10 @@ class IndenterDataset:
 
     def to_df(self) -> pd.DataFrame:
         """Converts a .nmd file to a pandas DataFrame, including all test runs."""
-        return pd.concat([test.to_df() for test in self.tests], axis=1)
+        return pd.concat([test.to_df(include_id=True) for test in self.tests], axis=1)
 
     def to_csv(self, filename: str):
-        self.to_df().to_csv(filename)
+        self.to_df().to_csv(filename, index=False)
 
 
 class IndenterSampleSummary:
@@ -211,8 +211,12 @@ class IndenterTest:
         else:
             raise KeyError(key)
 
-    def to_df(self) -> pd.DataFrame:
-        return pd.DataFrame(self.arrays)
+    def to_df(self, include_id=False) -> pd.DataFrame:
+        df = pd.DataFrame(self.arrays)
+        if include_id:
+            df.insert(0, "unique_id", self.unique_id)
+            df.insert(1, "start_time", self.start_time)
+        return df
 
     def to_csv(self, filename: str):
         self.to_df().to_csv(filename, index=False)
