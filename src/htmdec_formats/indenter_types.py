@@ -180,3 +180,46 @@ class IndenterChannel:
     documentation: str
     stringvalue: str
     dataindex: int = -1
+
+
+@dataclasses.dataclass
+class IndenterSample:
+    name: str
+    folder: str
+    templatename: str
+    methodfolder: str
+    uniqueid: str
+    protected: bool
+    savedver: str
+    supportfasttest: bool
+    supportsingletest: bool
+    supportmultisample: bool
+    contactsurfacedistanceedit: bool
+    contactsurfacevelocityedit: bool
+    contactsurfacesensitivityedit: bool
+    contactsurfaceadvanced: bool
+    contactsurfacesensitivity: str
+    contactsurfacevelocity: str
+    contactsurfaceheight: str
+    contactsurfacesensitivitydefault: str
+    contactsurfacevelocitydefault: str
+    contactsurfaceheightdefault: str
+    contactsurface_advancedconfig: str
+    maxdatapoints: int
+    maxdatapointspertest: int
+    maxdatapointstoplot: int
+    maxtimepertest: float
+    autoexportpath: str
+    autoexportformat: str
+    autoexport: bool
+    blitz3d: bool
+    blitz4d: bool
+    surveyscan: bool
+
+
+@dataclasses.dataclass
+class IndenterChannelBins:
+    name: str
+    unitclass: str
+    unittype: int
+    bins: np.ndarray

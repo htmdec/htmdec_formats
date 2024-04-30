@@ -5,7 +5,7 @@ from typing import Iterable
 import itertools
 
 try:
-    from .ksy_files.nmdfile import Nmdfile
+    from .ksy_files.nmdfile import Nmdfile as KaitaiNmdfile
     from .ksy_files.simple_xls import SimpleXls
 except ImportError as e:
     print(f"Error: {e}")
@@ -18,6 +18,8 @@ from .indenter_types import (
     IndenterCalculation,
     IndenterSyschannel,
     IndenterChannel,
+    IndenterChannelBins,
+    IndenterSample,
     cast_to_dataclass,
 )
 import pandas as pd
@@ -26,16 +28,58 @@ import xml.etree.ElementTree as ET
 import base64
 
 
+class XmlDummy:
+    def __init__(self, contents: str):
+        self.contents = contents
+
+
+_DELIM_START = b"<SAMPLE"
+_DELIM_END = b"</SAMPLE>"
+
+
+class Nmdfile:
+    # We are re-implementing this without using Kaitai so that we can improve
+    # performance.  The kaitai wrapper was, and is, very useful.  However, with
+    # our specific use case, where we rely on a delimiter to find the end of the
+    # XML portion, it conducts a progressive "+=" concatenation to construct the
+    # string.  For very long strings, like we have, this becomes extremely slow.
+    def __init__(self, filename: str):
+        # We will read the whole file into memory
+        with open(filename, "rb") as f:
+            file_contents = f.read()
+        xml_start = file_contents.find(_DELIM_START)
+        xml_end = file_contents.rfind(_DELIM_END) + len(_DELIM_END)
+        self.unk = file_contents[837 * 4 : xml_start]
+        self.xml = XmlDummy(file_contents[xml_start:xml_end].decode("utf-8"))
+        assert file_contents[xml_end + 2 : xml_end + 4] == b"\x00\x00"
+
+        self.data = KaitaiNmdfile.Datasets.from_bytes(file_contents[xml_end:])
+
+    @classmethod
+    def from_filename(cls, filename: str) -> "Nmdfile":
+        return cls(filename)
+
+
 class IndenterDataset:
     nmd_file: Nmdfile
     _xml_tree: ET.ElementTree
     result_vars: dict[str, "IndenterVar"]
     tests: list["IndenterTest"]
+    metadata: IndenterSample
+    sample_summary: "IndenterSampleSummary"
 
     def __init__(self, nmd_file: Nmdfile):
         self.nmd_file = nmd_file
         self._load_xml()
         self._load_tests()
+        if self._xml_tree.find("Sample") is not None:
+            self.metadata = cast_to_dataclass(
+                IndenterSample, self._xml_tree.find("Sample").attrib
+            )
+        if self._xml_tree.find("SAMPLESUMMARY") is not None:
+            self.sample_summary = IndenterSampleSummary(
+                self._xml_tree.find("SAMPLESUMMARY")
+            )
 
     def _load_xml(self):
         self._xml_tree = ET.ElementTree(ET.fromstring(self.nmd_file.xml.contents))
@@ -66,9 +110,7 @@ class IndenterDataset:
     @staticmethod
     def from_filename(filename: str) -> "IndenterDataset":
         """Creates an IndenterDataset object from a .nmd file."""
-        with open(filename, "rb") as f:
-            filebytes = f.read()
-        nmd: Nmdfile = Nmdfile.from_bytes(filebytes)
+        nmd: Nmdfile = Nmdfile.from_filename(filename)
         return IndenterDataset(nmd)
 
     def to_df(self) -> pd.DataFrame:
@@ -81,6 +123,33 @@ class IndenterDataset:
             test_df.insert(2, "STARTTIME", test.start_time)
             tests.append(test_df)
         return pd.concat(tests)
+
+    def to_csv(self, filename: str):
+        self.to_df().to_csv(filename, index=False)
+
+
+class IndenterSampleSummary:
+    startmarkername: str
+    endmarkername: str
+    normchanname: str
+    channels: dict[str, IndenterChannelBins]
+
+    def __init__(self, sample_xml_subtree: ET.Element):
+        self.startmarkername = sample_xml_subtree.attrib["STARTMARKERNAME"]
+        self.endmarkername = sample_xml_subtree.attrib["ENDMARKERNAME"]
+        self.normchanname = sample_xml_subtree.attrib["NORMCHANNAME"]
+        self.channels = {}
+        for channel in sample_xml_subtree.findall("Channels/Channel") or []:
+            bins = []
+            for bin in channel.findall("Bins/Bin") or []:
+                b = base64.b64decode(bin.attrib["VALUE"])
+                bins.append(np.frombuffer(b, dtype="f8"))
+            bins = np.array(bins)
+            attrib = channel.attrib.copy()
+            attrib["BINS"] = bins
+            self.channels[attrib["NAME"]] = cast_to_dataclass(
+                IndenterChannelBins, attrib
+            )
 
 
 class IndenterTest:
@@ -119,6 +188,22 @@ class IndenterTest:
             )
         )
 
+    def get_inputs(self):
+        df = pd.DataFrame(self.inputs.values()).set_index("name")
+        return df
+
+    def get_channels(self):
+        df = pd.DataFrame(self.channels.values()).set_index("name")
+        return df
+
+    def get_syschannels(self):
+        df = pd.DataFrame(self.syschannels.values()).set_index("name")
+        return df
+
+    def get_calculations(self):
+        df = pd.DataFrame(self.calculations.values()).set_index("name")
+        return df
+
     def get_field(
         self, key
     ) -> IndenterTestInput | IndenterCalculation | IndenterSyschannel | IndenterChannel:
@@ -133,8 +218,15 @@ class IndenterTest:
         else:
             raise KeyError(key)
 
-    def to_df(self) -> pd.DataFrame:
-        return pd.DataFrame(self.arrays)
+    def to_df(self, include_id=False) -> pd.DataFrame:
+        df = pd.DataFrame(self.arrays)
+        if include_id:
+            df.insert(0, "UNIQUEID", self.unique_id)
+            df.insert(1, "STARTTIME", self.start_time)
+        return df
+
+    def to_csv(self, filename: str):
+        self.to_df().to_csv(filename, index=False)
 
     def _parse_element_type(self, etype: str, cls: type):
         result = {}
