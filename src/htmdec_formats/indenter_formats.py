@@ -83,6 +83,7 @@ class IndenterDataset:
 
     def _load_xml(self):
         self._xml_tree = ET.ElementTree(ET.fromstring(self.nmd_file.xml.contents))
+        ET.indent(self._xml_tree.getroot())
         results = {}
         for result in self._xml_tree.findall("RESULTS/Result") or []:
             stats = base64.b64decode(result.attrib["STATISTICS"])
