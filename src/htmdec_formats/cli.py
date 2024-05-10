@@ -40,5 +40,12 @@ def nmd_extract_xml(nmdfile: str, outfile: str):
     dataset._xml_tree.write(outfile)
 
 
+@app.command()
+def nmd_to_xlsx(nmdfile: str, outfile: str):
+    """Convert an NMD file to an XLSX file."""
+    dataset = htmdec_formats.IndenterDataset.from_filename(nmdfile)
+    dataset.to_xlsx(outfile)
+
+
 if __name__ == "__main__":
     app()

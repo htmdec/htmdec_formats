@@ -11,7 +11,7 @@ authors = [{ name = "Matthew Turk", email = "matthewturk@gmail.com" }]
 maintainers = [{ name = "Matthew Turk", email = "matthewturk@gmail.com" }]
 classifiers = []
 license = { text = "MIT license" }
-dependencies = ["typer", "kaitaistruct", "pandas", "numpy"]
+dependencies = ["typer", "kaitaistruct", "pandas", "numpy", "xlsxwriter", "unyt"]
 
 [project.optional-dependencies]
 dev = [
