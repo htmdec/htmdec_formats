@@ -92,5 +92,12 @@ def pxt_info_query(
             console.print(f"  {key}: {dataset.metadata[section][key]}")
 
 
+@app.command()
+def pxt_to_hdf5(pxtfile: str, outfile: str):
+    """Convert a PXT file to an HDF5 file."""
+    dataset = htmdec_formats.ARPESDataset.from_file(pxtfile)
+    dataset.to_hdf5(outfile)
+
+
 if __name__ == "__main__":
     app()

@@ -45,7 +45,6 @@ class ARPESDataset:
             [_.value for _ in pxt_file.wave.layers],
             (max(self.num_layers, 1), self.num_cols, self.num_rows),
         )
-        import pdb
 
         if "\r\r" in pxt_file.metadata:
             md, self.dims = pxt_file.metadata.rsplit("\r\r", 1)
@@ -85,3 +84,13 @@ class ARPESDataset:
         if layer > self.num_layers or layer < 1:
             raise IndexError(f"Layer {layer} is out of bounds.")
         return self.array_data[layer - 1, :, :]
+
+    def to_hdf5(self, filename: str):
+        """Write the data to an HDF5 file."""
+        import h5py
+
+        with h5py.File(filename, "w") as f:
+            dataset = f.create_dataset("data", data=self.array_data)
+            dataset.attrs["bounds"] = self.bounds
+            dataset.attrs["dims"] = self.dims
+            dataset.attrs["metadata"] = self._metadata
