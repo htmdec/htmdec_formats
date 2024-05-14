@@ -15,7 +15,7 @@ seq:
     type: u2
   - id: wave_size
     type: u4
-  - id: wave1
+  - id: wave
     type: wave_data
     size: wave_size + 40
   - id: unk7
@@ -47,7 +47,7 @@ types:
         type: u4
       - id: row_delta
         type: f8
-      - id: column_delta
+      - id: col_delta
         type: f8
       - id: layer_delta
         type: f8
@@ -55,7 +55,7 @@ types:
         type: f8
       - id: row_start
         type: f8
-      - id: column_start
+      - id: col_start
         type: f8
       - id: layer_start
         type: f8

@@ -27,7 +27,7 @@ BROWSER := python -c "$$BROWSER_PYSCRIPT"
 help:
 	@python -c "$$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
 
-kaitai: src/htmdec_formats/ksy_files/nmdfile.py src/htmdec_formats/ksy_files/simple_xls.py ## rebuild kaitai .py files from .ksy files
+kaitai: src/htmdec_formats/ksy_files/nmdfile.py src/htmdec_formats/ksy_files/simple_xls.py src/htmdec_formats/ksy_files/pxtfile.py ## rebuild kaitai .py files from .ksy files
 
 %.py : %.ksy
 	ksc --target=python --python-package=htmdec_formats.ksy_files --outdir=$(dir $@) $<
