@@ -1,7 +1,6 @@
 """Main module."""
 
 import sys
-from typing import Iterable
 import itertools
 
 try:
@@ -12,6 +11,12 @@ except ImportError as e:
     print("Please run 'make install' to install the necessary dependencies.")
     sys.exit(1)
 
+from .utils.convert import (
+    export_results_to_xlsx,
+    export_inputs_to_xlsx,
+    export_summary_to_xlsx,
+    export_test_to_xlsx,
+)
 from .indenter_types import (
     IndenterVar,
     IndenterTestInput,
@@ -24,6 +29,7 @@ from .indenter_types import (
 )
 import pandas as pd
 import numpy as np
+import xlsxwriter
 import xml.etree.ElementTree as ET
 import base64
 
@@ -127,6 +133,16 @@ class IndenterDataset:
 
     def to_csv(self, filename: str):
         self.to_df().to_csv(filename, index=False)
+
+    def to_xlsx(self, filename: str):
+        with xlsxwriter.Workbook(filename) as workbook:
+            export_results_to_xlsx(self, workbook)
+            export_inputs_to_xlsx(self, workbook, "Pre-Test Inputs")
+            export_summary_to_xlsx(self, workbook)
+            export_inputs_to_xlsx(self, workbook, "Post-Test Inputs")
+
+            for test_index, test in enumerate(self.tests):
+                export_test_to_xlsx(test, test_index, workbook)
 
 
 class IndenterSampleSummary:
