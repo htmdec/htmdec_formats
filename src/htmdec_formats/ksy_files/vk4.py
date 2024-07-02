@@ -1,11 +1,10 @@
 # This is a generated file! Please edit source .ksy file and use kaitai-struct-compiler to rebuild
 
-from pkg_resources import parse_version
 import kaitaistruct
 from kaitaistruct import KaitaiStruct, KaitaiStream, BytesIO
 
 
-if parse_version(kaitaistruct.__version__) < parse_version('0.9'):
+if getattr(kaitaistruct, 'API_VERSION', (0, 9)) < (0, 9):
     raise Exception("Incompatible Kaitai Struct Python API: 0.9 or later is required, but you have %s" % (kaitaistruct.__version__))
 
 class Vk4(KaitaiStruct):
@@ -24,6 +23,77 @@ class Vk4(KaitaiStruct):
         self.offset_table = Vk4.OffsetTable(_io__raw_offset_table, self, self._root)
         self.meas_conds = Vk4.MeasurementConditions(self._io, self, self._root)
 
+    class FalseColorImage(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.width = self._io.read_u4le()
+            self.height = self._io.read_u4le()
+            self.bit_depth = self._io.read_u4le()
+            if not  ((self.bit_depth == 8) or (self.bit_depth == 16) or (self.bit_depth == 32)) :
+                raise kaitaistruct.ValidationNotAnyOfError(self.bit_depth, self._io, u"/types/false_color_image/seq/2")
+            self.compression = self._io.read_u4le()
+            self.byte_size = self._io.read_u4le()
+            self.palette_range_min = self._io.read_u4le()
+            self.palette_range_max = self._io.read_u4le()
+            self.palette = []
+            for i in range(256):
+                self.palette.append(Vk4.RgbRecord(self._io, self, self._root))
+
+            self.data = self._io.read_bytes(((self.width * self.height) * self.bit_depth) // 8)
+
+        @property
+        def bps(self):
+            if hasattr(self, '_m_bps'):
+                return self._m_bps
+
+            self._m_bps = (self.bit_depth >> 3)
+            return getattr(self, '_m_bps', None)
+
+
+    class RgbRecord(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.red = self._io.read_u1()
+            self.green = self._io.read_u1()
+            self.blue = self._io.read_u1()
+
+
+    class TrueColorImage(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.width = self._io.read_u4le()
+            self.height = self._io.read_u4le()
+            self.bit_depth = self._io.read_u4le()
+            if not  ((self.bit_depth == 24)) :
+                raise kaitaistruct.ValidationNotAnyOfError(self.bit_depth, self._io, u"/types/true_color_image/seq/2")
+            self.compression = self._io.read_u4le()
+            self.byte_size = self._io.read_u4le()
+            self.data = self._io.read_bytes(((self.width * self.height) * self.bit_depth) // 8)
+
+        @property
+        def bps(self):
+            if hasattr(self, '_m_bps'):
+                return self._m_bps
+
+            self._m_bps = (self.bit_depth >> 3)
+            return getattr(self, '_m_bps', None)
+
+
     class Blank(KaitaiStruct):
         def __init__(self, _io, _parent=None, _root=None):
             self._io = _io
@@ -35,27 +105,16 @@ class Vk4(KaitaiStruct):
             pass
 
 
-    class LightInfo(KaitaiStruct):
-        def __init__(self, root_pos, _io, _parent=None, _root=None):
+    class CodedString(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
             self._io = _io
             self._parent = _parent
             self._root = _root if _root else self
-            self.root_pos = root_pos
             self._read()
 
         def _read(self):
-            pass
-
-        @property
-        def value(self):
-            if hasattr(self, '_m_value'):
-                return self._m_value if hasattr(self, '_m_value') else None
-
-            _pos = self._io.pos()
-            self._io.seek(self.root_pos)
-            self._m_value = self._io.read_u1()
-            self._io.seek(_pos)
-            return self._m_value if hasattr(self, '_m_value') else None
+            self.length = self._io.read_u4le()
+            self.string = (self._io.read_bytes((self.length * 2))).decode(u"UTF-16LE")
 
 
     class MeasurementCondition(KaitaiStruct):
@@ -86,9 +145,9 @@ class Vk4(KaitaiStruct):
             self.optical_zoom = self._io.read_u4le()
             self.num_line = self._io.read_u4le()
             self.line0_pos = self._io.read_u4le()
-            self.reserved1 = [None] * (3)
+            self.reserved1 = []
             for i in range(3):
-                self.reserved1[i] = self._io.read_u4le()
+                self.reserved1.append(self._io.read_u4le())
 
             self.lens_mag = self._io.read_u4le()
             self.pmt_gain_mode = self._io.read_u4le()
@@ -111,9 +170,9 @@ class Vk4(KaitaiStruct):
             self.x_length_per_pixel = self._io.read_u4le()
             self.y_length_per_pixel = self._io.read_u4le()
             self.z_length_per_digit = self._io.read_u4le()
-            self.reserved3 = [None] * (5)
+            self.reserved3 = []
             for i in range(5):
-                self.reserved3[i] = self._io.read_u4le()
+                self.reserved3.append(self._io.read_u4le())
 
             self.light_filter_type = self._io.read_u4le()
             self.reserved4 = self._io.read_u4le()
@@ -198,35 +257,26 @@ class Vk4(KaitaiStruct):
 
 
     class DataImage(KaitaiStruct):
-        def __init__(self, _io, _parent=None, _root=None):
+        def __init__(self, root_pos, _io, _parent=None, _root=None):
             self._io = _io
             self._parent = _parent
             self._root = _root if _root else self
+            self.root_pos = root_pos
             self._read()
 
         def _read(self):
-            self.width = self._io.read_u4le()
-            self.height = self._io.read_u4le()
-            self.bit_depth = self._io.read_u4le()
-            if not  ((self.bit_depth == 8) or (self.bit_depth == 16) or (self.bit_depth == 32)) :
-                raise kaitaistruct.ValidationNotAnyOfError(self.bit_depth, self._io, u"/types/data_image/seq/2")
-            self.compression = self._io.read_u4le()
-            self.byte_size = self._io.read_u4le()
-            self.palette_range_min = self._io.read_u4le()
-            self.palette_range_max = self._io.read_u4le()
-            self.palette = [None] * (768)
-            for i in range(768):
-                self.palette[i] = self._io.read_u4le()
-
-            self.data = self._io.read_bytes(self.byte_size)
+            pass
 
         @property
-        def bps(self):
-            if hasattr(self, '_m_bps'):
-                return self._m_bps if hasattr(self, '_m_bps') else None
+        def value(self):
+            if hasattr(self, '_m_value'):
+                return self._m_value
 
-            self._m_bps = (self.bit_depth >> 3)
-            return self._m_bps if hasattr(self, '_m_bps') else None
+            _pos = self._io.pos()
+            self._io.seek(self.root_pos)
+            self._m_value = Vk4.FalseColorImage(self._io, self, self._root)
+            self._io.seek(_pos)
+            return getattr(self, '_m_value', None)
 
 
     class OffsetTable(KaitaiStruct):
@@ -240,16 +290,16 @@ class Vk4(KaitaiStruct):
             self.setting = self._io.read_u4le()
             self.color_peak = self._io.read_u4le()
             self.color_light = self._io.read_u4le()
-            self.light = [None] * (3)
+            self.light = []
             for i in range(3):
-                self.light[i] = self._io.read_u4le()
+                self.light.append(self._io.read_u4le())
 
-            self.height = [None] * (3)
+            self.height = []
             for i in range(3):
-                self.height[i] = self._io.read_u4le()
+                self.height.append(self._io.read_u4le())
 
             self.color_peak_thumbnail = self._io.read_u4le()
-            self.color_thumbnail = self._io.read_u4le()
+            self.color_light_thumbnail = self._io.read_u4le()
             self.light_thumbnail = self._io.read_u4le()
             self.height_thumbnail = self._io.read_u4le()
             self.assemble = self._io.read_u4le()
@@ -260,29 +310,124 @@ class Vk4(KaitaiStruct):
 
 
     @property
+    def height(self):
+        if hasattr(self, '_m_height'):
+            return self._m_height
+
+        self._m_height = []
+        for i in range(len(self.offset_table.height)):
+            _on = self.offset_table.height[i] > 0
+            if _on == True:
+                self._m_height.append(Vk4.DataImage(self.offset_table.height[i], self._io, self, self._root))
+            elif _on == False:
+                self._m_height.append(Vk4.Blank(self._io, self, self._root))
+
+        return getattr(self, '_m_height', None)
+
+    @property
+    def light(self):
+        if hasattr(self, '_m_light'):
+            return self._m_light
+
+        self._m_light = []
+        for i in range(len(self.offset_table.light)):
+            _on = self.offset_table.light[i] > 0
+            if _on == True:
+                self._m_light.append(Vk4.DataImage(self.offset_table.light[i], self._io, self, self._root))
+            elif _on == False:
+                self._m_light.append(Vk4.Blank(self._io, self, self._root))
+
+        return getattr(self, '_m_light', None)
+
+    @property
+    def color_light(self):
+        if hasattr(self, '_m_color_light'):
+            return self._m_color_light
+
+        _pos = self._io.pos()
+        self._io.seek(self.offset_table.color_light)
+        self._m_color_light = Vk4.TrueColorImage(self._io, self, self._root)
+        self._io.seek(_pos)
+        return getattr(self, '_m_color_light', None)
+
+    @property
+    def strings(self):
+        if hasattr(self, '_m_strings'):
+            return self._m_strings
+
+        _pos = self._io.pos()
+        self._io.seek(self.offset_table.string_data)
+        self._m_strings = []
+        for i in range(2):
+            self._m_strings.append(Vk4.CodedString(self._io, self, self._root))
+
+        self._io.seek(_pos)
+        return getattr(self, '_m_strings', None)
+
+    @property
+    def color_peak(self):
+        if hasattr(self, '_m_color_peak'):
+            return self._m_color_peak
+
+        _pos = self._io.pos()
+        self._io.seek(self.offset_table.color_peak)
+        self._m_color_peak = Vk4.TrueColorImage(self._io, self, self._root)
+        self._io.seek(_pos)
+        return getattr(self, '_m_color_peak', None)
+
+    @property
+    def color_light_thumbnail(self):
+        if hasattr(self, '_m_color_light_thumbnail'):
+            return self._m_color_light_thumbnail
+
+        _pos = self._io.pos()
+        self._io.seek(self.offset_table.color_light_thumbnail)
+        self._m_color_light_thumbnail = Vk4.TrueColorImage(self._io, self, self._root)
+        self._io.seek(_pos)
+        return getattr(self, '_m_color_light_thumbnail', None)
+
+    @property
     def assembly_header(self):
         if hasattr(self, '_m_assembly_header'):
-            return self._m_assembly_header if hasattr(self, '_m_assembly_header') else None
+            return self._m_assembly_header
 
         _pos = self._io.pos()
         self._io.seek(self.offset_table.assemble)
         self._m_assembly_header = Vk4.AssemblyHeader(self._io, self, self._root)
         self._io.seek(_pos)
-        return self._m_assembly_header if hasattr(self, '_m_assembly_header') else None
+        return getattr(self, '_m_assembly_header', None)
 
     @property
-    def lights(self):
-        if hasattr(self, '_m_lights'):
-            return self._m_lights if hasattr(self, '_m_lights') else None
+    def height_thumbnail(self):
+        if hasattr(self, '_m_height_thumbnail'):
+            return self._m_height_thumbnail
 
-        self._m_lights = [None] * (len(self.offset_table.light))
-        for i in range(len(self.offset_table.light)):
-            _on = self.offset_table.light[i] > 0
-            if _on == True:
-                self._m_lights[i] = Vk4.LightInfo(self.offset_table.light[i], self._io, self, self._root)
-            elif _on == False:
-                self._m_lights[i] = Vk4.Blank(self._io, self, self._root)
+        _pos = self._io.pos()
+        self._io.seek(self.offset_table.height_thumbnail)
+        self._m_height_thumbnail = Vk4.TrueColorImage(self._io, self, self._root)
+        self._io.seek(_pos)
+        return getattr(self, '_m_height_thumbnail', None)
 
-        return self._m_lights if hasattr(self, '_m_lights') else None
+    @property
+    def color_peak_thumbnail(self):
+        if hasattr(self, '_m_color_peak_thumbnail'):
+            return self._m_color_peak_thumbnail
+
+        _pos = self._io.pos()
+        self._io.seek(self.offset_table.color_peak_thumbnail)
+        self._m_color_peak_thumbnail = Vk4.TrueColorImage(self._io, self, self._root)
+        self._io.seek(_pos)
+        return getattr(self, '_m_color_peak_thumbnail', None)
+
+    @property
+    def light_thumbnail(self):
+        if hasattr(self, '_m_light_thumbnail'):
+            return self._m_light_thumbnail
+
+        _pos = self._io.pos()
+        self._io.seek(self.offset_table.light_thumbnail)
+        self._m_light_thumbnail = Vk4.TrueColorImage(self._io, self, self._root)
+        self._io.seek(_pos)
+        return getattr(self, '_m_light_thumbnail', None)
 
 

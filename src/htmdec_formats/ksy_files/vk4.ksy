@@ -17,25 +17,57 @@ instances:
   assembly_header:
     pos: offset_table.assemble
     type: assembly_header
-  lights:
+  color_peak:
+    pos: offset_table.color_peak
+    type: true_color_image
+  color_light:
+    pos: offset_table.color_light
+    type: true_color_image
+  light:
     repeat: expr
     repeat-expr: offset_table.light.size
     type:
       switch-on: offset_table.light[_index] > 0
       cases:
-        true: light_info(offset_table.light[_index])
+        true: data_image(offset_table.light[_index])
         false: blank
+  height:
+    repeat: expr
+    repeat-expr: offset_table.height.size
+    type:
+      switch-on: offset_table.height[_index] > 0
+      cases:
+        true: data_image(offset_table.height[_index])
+        false: blank
+  color_peak_thumbnail:
+    pos: offset_table.color_peak_thumbnail
+    type: true_color_image
+  color_light_thumbnail:
+    pos: offset_table.color_light_thumbnail
+    type: true_color_image
+  light_thumbnail:
+    pos: offset_table.light_thumbnail
+    type: true_color_image
+  height_thumbnail:
+    pos: offset_table.height_thumbnail
+    type: true_color_image
+  strings:
+    pos: offset_table.string_data
+    type: coded_string
+    repeat: expr
+    repeat-expr: 2
+
 types:
   blank:
     seq: []
-  light_info:
+  data_image:
     params:
       - id: root_pos
         type: u8
     instances:
       value:
         pos: root_pos
-        type: u1
+        type: false_color_image
   header:
     seq:
       - id: magic
@@ -62,7 +94,7 @@ types:
         repeat-expr: 3
       - id: color_peak_thumbnail
         type: u4
-      - id: color_thumbnail
+      - id: color_light_thumbnail
         type: u4
       - id: light_thumbnail
         type: u4
@@ -257,7 +289,7 @@ types:
         type: u2
       - id: count_y
         type: u2
-  data_image:
+  false_color_image:
     seq:
       - id: width
         type: u4
@@ -276,11 +308,52 @@ types:
       - id: palette_range_max
         type: u4
       - id: palette
-        type: u4
+        type: rgb_record
         repeat: expr
-        repeat-expr: 768
+        repeat-expr: 256
       - id: data
-        size: byte_size
+        size: width * height * bit_depth / 8
     instances:
       bps:
         value: bit_depth >> 3
+  true_color_image:
+    seq:
+      - id: width
+        type: u4
+      - id: height
+        type: u4
+      - id: bit_depth
+        type: u4
+        valid:
+          any-of: [24]
+      - id: compression
+        type: u4
+      - id: byte_size
+        type: u4
+      ## This is fancy, but extremely slow and memory hungry
+      #- id: data
+      #  type: rgb_record
+      #  repeat: expr
+      #  repeat-expr: width * height * bit_depth / 8
+      ## Let's read it as a block and do the magic in Python 
+      - id: data
+        size: width * height * bit_depth / 8
+    instances:
+      bps:
+        value: bit_depth >> 3
+  coded_string:
+    seq:
+      - id: length
+        type: u4
+      - id: string
+        type: str
+        size: length * 2
+        encoding: UTF-16LE
+  rgb_record:
+    seq:
+      - id: red
+        type: u1
+      - id: green
+        type: u1
+      - id: blue
+        type: u1

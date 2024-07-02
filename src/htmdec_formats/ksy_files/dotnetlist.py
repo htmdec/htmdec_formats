@@ -1,12 +1,11 @@
 # This is a generated file! Please edit source .ksy file and use kaitai-struct-compiler to rebuild
 
-from pkg_resources import parse_version
 import kaitaistruct
 from kaitaistruct import KaitaiStruct, KaitaiStream, BytesIO
 from enum import Enum
 
 
-if parse_version(kaitaistruct.__version__) < parse_version('0.9'):
+if getattr(kaitaistruct, 'API_VERSION', (0, 9)) < (0, 9):
     raise Exception("Incompatible Kaitai Struct Python API: 0.9 or later is required, but you have %s" % (kaitaistruct.__version__))
 
 class Dotnetlist(KaitaiStruct):
@@ -106,18 +105,18 @@ class Dotnetlist(KaitaiStruct):
         @property
         def last(self):
             if hasattr(self, '_m_last'):
-                return self._m_last if hasattr(self, '_m_last') else None
+                return self._m_last
 
             self._m_last = (self.val & 128) == 0
-            return self._m_last if hasattr(self, '_m_last') else None
+            return getattr(self, '_m_last', None)
 
         @property
         def current_value(self):
             if hasattr(self, '_m_current_value'):
-                return self._m_current_value if hasattr(self, '_m_current_value') else None
+                return self._m_current_value
 
             self._m_current_value = (self.val if self.idx == 0 else (self._parent.length_bytes[(self.idx - 1)].current_value + (self.val << (self.idx * 8))))
-            return self._m_current_value if hasattr(self, '_m_current_value') else None
+            return getattr(self, '_m_current_value', None)
 
 
     class PrimitiveType(KaitaiStruct):
@@ -140,29 +139,29 @@ class Dotnetlist(KaitaiStruct):
             self._read()
 
         def _read(self):
-            self.binary_type = [None] * (self.count)
+            self.binary_type = []
             for i in range(self.count):
-                self.binary_type[i] = KaitaiStream.resolve_enum(Dotnetlist.BinaryTypeEnum, self._io.read_u1())
+                self.binary_type.append(KaitaiStream.resolve_enum(Dotnetlist.BinaryTypeEnum, self._io.read_u1()))
 
-            self.additional_infos = [None] * (self.count)
+            self.additional_infos = []
             for i in range(self.count):
                 _on = self.binary_type[i]
                 if _on == Dotnetlist.BinaryTypeEnum.primitive:
-                    self.additional_infos[i] = Dotnetlist.PrimitiveType(self._io, self, self._root)
+                    self.additional_infos.append(Dotnetlist.PrimitiveType(self._io, self, self._root))
                 elif _on == Dotnetlist.BinaryTypeEnum.system_class:
-                    self.additional_infos[i] = Dotnetlist.SystemClassName(self._io, self, self._root)
+                    self.additional_infos.append(Dotnetlist.SystemClassName(self._io, self, self._root))
                 elif _on == Dotnetlist.BinaryTypeEnum.klass:
-                    self.additional_infos[i] = Dotnetlist.ClassInfo(self._io, self, self._root)
+                    self.additional_infos.append(Dotnetlist.ClassInfo(self._io, self, self._root))
                 elif _on == Dotnetlist.BinaryTypeEnum.primitive_array:
-                    self.additional_infos[i] = Dotnetlist.PrimitiveType(self._io, self, self._root)
+                    self.additional_infos.append(Dotnetlist.PrimitiveType(self._io, self, self._root))
 
-            self.members = [None] * (self.count)
+            self.members = []
             for i in range(self.count):
                 _on = self.binary_type[i]
                 if _on == Dotnetlist.BinaryTypeEnum.primitive:
-                    self.members[i] = Dotnetlist.PrimitiveValue(self.additional_infos[i].ptype, self._io, self, self._root)
+                    self.members.append(Dotnetlist.PrimitiveValue(self.additional_infos[i].ptype, self._io, self, self._root))
                 elif _on == Dotnetlist.BinaryTypeEnum.primitive_array:
-                    self.members[i] = Dotnetlist.SerializedRecord(self._io, self, self._root)
+                    self.members.append(Dotnetlist.SerializedRecord(self._io, self, self._root))
 
 
 
@@ -197,9 +196,9 @@ class Dotnetlist(KaitaiStruct):
             self.object_id = self._io.read_u4le()
             self.name = Dotnetlist.LengthPrefixedString(self._io, self, self._root)
             self.member_count = self._io.read_u4le()
-            self.member_names = [None] * (self.member_count)
+            self.member_names = []
             for i in range(self.member_count):
-                self.member_names[i] = Dotnetlist.LengthPrefixedString(self._io, self, self._root)
+                self.member_names.append(Dotnetlist.LengthPrefixedString(self._io, self, self._root))
 
 
 
@@ -259,10 +258,10 @@ class Dotnetlist(KaitaiStruct):
         @property
         def length(self):
             if hasattr(self, '_m_length'):
-                return self._m_length if hasattr(self, '_m_length') else None
+                return self._m_length
 
             self._m_length = self.length_bytes[(len(self.length_bytes) - 1)].current_value
-            return self._m_length if hasattr(self, '_m_length') else None
+            return getattr(self, '_m_length', None)
 
 
     class MemberReferenceRecord(KaitaiStruct):
@@ -286,29 +285,29 @@ class Dotnetlist(KaitaiStruct):
         def _read(self):
             self.info = Dotnetlist.ArrayInfo(self._io, self, self._root)
             self.value_type = KaitaiStream.resolve_enum(Dotnetlist.PrimitiveTypeEnum, self._io.read_u1())
-            self.values = [None] * (self.info.length)
+            self.values = []
             for i in range(self.info.length):
                 _on = self.value_type
                 if _on == Dotnetlist.PrimitiveTypeEnum.double:
-                    self.values[i] = self._io.read_f8le()
+                    self.values.append(self._io.read_f8le())
                 elif _on == Dotnetlist.PrimitiveTypeEnum.uint16:
-                    self.values[i] = self._io.read_u2le()
+                    self.values.append(self._io.read_u2le())
                 elif _on == Dotnetlist.PrimitiveTypeEnum.int16:
-                    self.values[i] = self._io.read_s2le()
+                    self.values.append(self._io.read_s2le())
                 elif _on == Dotnetlist.PrimitiveTypeEnum.int64:
-                    self.values[i] = self._io.read_s8le()
+                    self.values.append(self._io.read_s8le())
                 elif _on == Dotnetlist.PrimitiveTypeEnum.int32:
-                    self.values[i] = self._io.read_s4le()
+                    self.values.append(self._io.read_s4le())
                 elif _on == Dotnetlist.PrimitiveTypeEnum.byte:
-                    self.values[i] = self._io.read_u1()
+                    self.values.append(self._io.read_u1())
                 elif _on == Dotnetlist.PrimitiveTypeEnum.uint32:
-                    self.values[i] = self._io.read_u4le()
+                    self.values.append(self._io.read_u4le())
                 elif _on == Dotnetlist.PrimitiveTypeEnum.uint64:
-                    self.values[i] = self._io.read_u8le()
+                    self.values.append(self._io.read_u8le())
                 elif _on == Dotnetlist.PrimitiveTypeEnum.char:
-                    self.values[i] = self._io.read_u1()
+                    self.values.append(self._io.read_u1())
                 elif _on == Dotnetlist.PrimitiveTypeEnum.single:
-                    self.values[i] = self._io.read_f4le()
+                    self.values.append(self._io.read_f4le())
 
 
 
