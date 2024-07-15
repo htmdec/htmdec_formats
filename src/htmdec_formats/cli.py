@@ -47,5 +47,12 @@ def nmd_to_xlsx(nmdfile: str, outfile: str):
     dataset.to_xlsx(outfile)
 
 
+@app.command()
+def cag_to_xlsx(cagfile: str, outfile: str):
+    """Convert a CAG file to an XLSX file."""
+    dataset = htmdec_formats.CAGDataset.from_filename(cagfile)
+    dataset.to_xlsx(outfile)
+
+
 if __name__ == "__main__":
     app()
