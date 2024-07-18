@@ -98,6 +98,18 @@ def pxt_to_hdf5(pxtfile: str, outfile: str):
     dataset = htmdec_formats.ARPESDataset.from_file(pxtfile)
     dataset.to_hdf5(outfile)
 
+@app.command()
+def nmd_to_xlsx(nmdfile: str, outfile: str):
+    """Convert an NMD file to an XLSX file."""
+    dataset = htmdec_formats.IndenterDataset.from_filename(nmdfile)
+    dataset.to_xlsx(outfile)
+
+
+@app.command()
+def cag_to_xlsx(cagfile: str, outfile: str):
+    """Convert a CAG file to an XLSX file."""
+    dataset = htmdec_formats.CAGDataset.from_filename(cagfile)
+    dataset.to_xlsx(outfile)
 
 if __name__ == "__main__":
     app()

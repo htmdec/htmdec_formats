@@ -27,9 +27,10 @@ BROWSER := python -c "$$BROWSER_PYSCRIPT"
 help:
 	@python -c "$$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
 
-kaitai: src/htmdec_formats/ksy_files/nmdfile.py src/htmdec_formats/ksy_files/simple_xls.py src/htmdec_formats/ksy_files/pxtfile.py ## rebuild kaitai .py files from .ksy files
+KSY_SOURCES := $(shell find src/htmdec_formats/ksy_files -name '*.ksy')
+COMPILED_KSY := $(KSY_SOURCES:%.ksy=%.py)
 
-%.py : %.ksy
+src/htmdec_formats/ksy_files/%.py : src/htmdec_formats/ksy_files/%.ksy
 	ksc --target=python --python-package=htmdec_formats.ksy_files --outdir=$(dir $@) $<
 
 clean: clean-build clean-pyc clean-test ## remove all build, test, coverage and Python artifacts
@@ -86,9 +87,8 @@ servedocs: docs ## compile the docs watching for changes
 release: dist ## package and upload a release
 	twine upload dist/*
 
-dist: clean kaitai ## builds source and wheel package
-	python setup.py sdist
-	python setup.py bdist_wheel
+dist: clean $(COMPILED_KSY) ## builds source and wheel package
+	python -m build . --sdist --wheel
 	ls -l dist
 
 install: clean ## install the package to the active Python's site-packages
