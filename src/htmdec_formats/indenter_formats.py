@@ -114,11 +114,11 @@ class IndenterDataset:
         for test in self._xml_tree.findall("TEST"):
             self.tests.append(IndenterTest(test, buffers))
 
-    @staticmethod
-    def from_filename(filename: str) -> "IndenterDataset":
+    @classmethod
+    def from_filename(cls, filename: str) -> "IndenterDataset":
         """Creates an IndenterDataset object from a .nmd file."""
         nmd: Nmdfile = Nmdfile.from_filename(filename)
-        return IndenterDataset(nmd)
+        return cls(nmd)
 
     def to_df(self) -> pd.DataFrame:
         """Converts a .nmd file to a concatenated set of pandas DataFrames."""
