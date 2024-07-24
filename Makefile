@@ -39,7 +39,7 @@ clean-build: ## remove build artifacts
 	rm -fr build/
 	rm -fr dist/
 	rm -fr .eggs/
-	rm -r src/htmdec_formats/ksy_files/*.py
+	rm -fr src/htmdec_formats/ksy_files/*.py
 	find . -name '*.egg-info' -exec rm -fr {} +
 	find . -name '*.egg' -exec rm -f {} +
 
@@ -91,5 +91,5 @@ dist: clean $(COMPILED_KSY) ## builds source and wheel package
 	python -m build . --sdist --wheel
 	ls -l dist
 
-install: clean ## install the package to the active Python's site-packages
-	python setup.py install
+install: clean $(COMPILED_KSY) ## install the package to the active Python's site-packages
+	python -m pip install .
