@@ -27,17 +27,18 @@ BROWSER := python -c "$$BROWSER_PYSCRIPT"
 help:
 	@python -c "$$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
 
+
 KSY_SOURCES := $(shell find src/htmdec_formats/ksy_files -name '*.ksy')
 COMPILED_KSY := $(KSY_SOURCES:%.ksy=%.py)
 
 src/htmdec_formats/ksy_files/%.py : src/htmdec_formats/ksy_files/%.ksy
-	ksc --target=python --python-package=htmdec_formats.ksy_files --outdir=$(dir $@) $<
+	/opt/homebrew/Cellar/kaitai-struct-compiler/0.10/bin/kaitai-struct-compiler --target=python --python-package=htmdec_formats.ksy_files --outdir=$(dir $@) $<
 
 clean: clean-build clean-pyc clean-test ## remove all build, test, coverage and Python artifacts
 
 clean-build: ## remove build artifacts
 	rm -fr build/
-	rm -fr dist/
+	rm -fr dist/xf
 	rm -fr .eggs/
 	rm -fr src/htmdec_formats/ksy_files/*.py
 	find . -name '*.egg-info' -exec rm -fr {} +
