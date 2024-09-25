@@ -26,9 +26,9 @@ htmdec-formats = "htmdec_formats.cli:app"
 
 [project.urls]
 
-bugs = "https://github.com/matthewturk/htmdec_formats/issues"
-changelog = "https://github.com/matthewturk/htmdec_formats/blob/master/changelog.md"
-homepage = "https://github.com/matthewturk/htmdec_formats"
+bugs = "https://github.com/htmdec/htmdec_formats/issues"
+changelog = "https://github.com/htmdec/htmdec_formats/blob/master/changelog.md"
+homepage = "https://github.com/htmdec/htmdec_formats"
 
 [tool.setuptools]
 package-dir = { "" = "src" }

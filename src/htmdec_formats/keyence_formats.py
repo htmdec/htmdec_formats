@@ -51,24 +51,33 @@ class CAGDataset:
                     "tree": ET.ElementTree(ET.fromstring(zip_ref.read(path.text))),
                 }
             # Get Cross Section Area measurements
-            term = ".//AnalysisKey[. = 'cde0af28-3791-4831-9fcf-5f73f53050d1']..."
-            for item in self.meta_files["PerCellConfigurationMap.xml"]["tree"].findall(
-                term
-            ):
-                # Get Path and FileItem
-                path = item.find("Path").text
-                fileItem = item.find("FileItem").text
-                vol_path = os.path.join(
-                    os.path.dirname(
-                        self.meta_files["PerCellConfigurationMap.xml"]["path"]
-                    ),
-                    path,
-                    "4dc4bcd6-0fac-4677-a83d-03132fed2eb1/60c3adb2-d2e3-4168-9629-8d8cb19bb751",
-                )
-                self.volumes[fileItem] = {
-                    "path": vol_path,
-                    "tree": ET.ElementTree(ET.fromstring(zip_ref.read(vol_path))),
-                }
+            current_path = None
+            current_fileitem = None
+            for element in self.meta_files["PerCellConfigurationMap.xml"][
+                "tree"
+            ].iter():
+                match element.tag:
+                    case "Path":
+                        current_path = element.text
+                    case "FileItem":
+                        current_fileitem = element.text
+                    case "StorageKey":
+                        if element.text == "4dc4bcd6-0fac-4677-a83d-03132fed2eb1":
+                            vol_path = os.path.join(
+                                os.path.dirname(
+                                    self.meta_files["PerCellConfigurationMap.xml"][
+                                        "path"
+                                    ]
+                                ),
+                                current_path,
+                                "4dc4bcd6-0fac-4677-a83d-03132fed2eb1/60c3adb2-d2e3-4168-9629-8d8cb19bb751",
+                            )
+                            self.volumes[current_fileitem] = {
+                                "path": vol_path,
+                                "tree": ET.ElementTree(
+                                    ET.fromstring(zip_ref.read(vol_path))
+                                ),
+                            }
 
             for key, volume in self.volumes.items():
                 xpath = "./" + "/".join(
