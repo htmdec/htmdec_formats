@@ -59,19 +59,21 @@ class ARPESDataset:
         # theta, phi.  So we can't use use splitlines -- as of 3.2, it includes
         # \v , which is used as a delimiter in the metadata.
         # This is not ideal, so we go back in and fix it up.
-        self._metadata = "\n".join(re.split("\n|\r", md))
+        metadata_split = re.split("\n|\r", md)
+        self._metadata = "\n".join([line for line in metadata_split if "\x0b" not in line])
         self.metadata = configparser.ConfigParser(delimiters=["=", chr(0x0b)])
         self.metadata.read_string(self._metadata)
-        # Now we're going to fix up the 'Run Mode Information' section by
-        # removing it from the config parser and adding it to the top-level
-        # class attributes here.
-        self.metadata.pop("Run Mode Information", {})
+        # We have avoided having the run mode information in the metadata here
+        # if it has numeric row values, but in some cases it has key/value pairs.
         # We go back to our original data to find the run mode information and
         # turn that into usable information.
-        rmi_string = "\n".join(line for line in self._metadata.split("\n") if "\x0b" in line)
-        self.run_mode_info = pd.read_csv(
-            io.StringIO(rmi_string), sep="\x0b"
-        )
+        rmi_string = "\n".join(line for line in metadata_split if "\x0b" in line)
+        if len(rmi_string.strip()) > 0:
+            self.run_mode_info = pd.read_csv(
+                io.StringIO(rmi_string), sep="\x0b"
+            )
+        else:
+            self.run_mode_info = pd.DataFrame()
 
     @property
     def bounds(self):
