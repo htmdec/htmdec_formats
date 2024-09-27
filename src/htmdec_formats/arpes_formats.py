@@ -15,6 +15,8 @@ import numpy as np
 import pandas as pd
 from typing import Optional
 import configparser
+import re
+import io
 
 
 class ARPESDataset:
@@ -51,9 +53,25 @@ class ARPESDataset:
         else:
             md = pxt_file.metadata
             self.dims = ""
-        self._metadata = "\n".join(md.splitlines())
-        self.metadata = configparser.ConfigParser()
+        # The 'Run Mode Information' section is not "standard" as it is set up
+        # such that each line is an entry in the list, where the first element
+        # is usually an integer index and the rest are things like x, y, z,
+        # theta, phi.  So we can't use use splitlines -- as of 3.2, it includes
+        # \v , which is used as a delimiter in the metadata.
+        # This is not ideal, so we go back in and fix it up.
+        self._metadata = "\n".join(re.split("\n|\r", md))
+        self.metadata = configparser.ConfigParser(delimiters=["=", chr(0x0b)])
         self.metadata.read_string(self._metadata)
+        # Now we're going to fix up the 'Run Mode Information' section by
+        # removing it from the config parser and adding it to the top-level
+        # class attributes here.
+        self.metadata.pop("Run Mode Information", {})
+        # We go back to our original data to find the run mode information and
+        # turn that into usable information.
+        rmi_string = "\n".join(line for line in self._metadata.split("\n") if "\x0b" in line)
+        self.run_mode_info = pd.read_csv(
+            io.StringIO(rmi_string), sep="\x0b"
+        )
 
     @property
     def bounds(self):
