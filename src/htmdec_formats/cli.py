@@ -66,8 +66,8 @@ def pxt_info_export(pxtfile: str, outfile: str):
     """Export the metadata of a PXT file to a file."""
     dataset = htmdec_formats.ARPESDataset.from_file(pxtfile)
     with open(outfile, "w") as f:
-        l = f.write(dataset._metadata)
-        console.print(f"Output {l} bytes to {outfile}.")
+        nbytes = f.write(dataset._metadata)
+        console.print(f"Output {nbytes} bytes to {outfile}.")
 
 
 @app.command()
