@@ -63,7 +63,7 @@ class ARPESDataset:
         self._metadata = "\n".join(
             [line for line in metadata_split if "\x0b" not in line]
         )
-        self.metadata = configparser.ConfigParser(delimiters=["=", chr(0x0B)])
+        self.metadata = configparser.ConfigParser(delimiters=["=", chr(0x0b)])
         self.metadata.read_string(self._metadata)
         # We have avoided having the run mode information in the metadata here
         # if it has numeric row values, but in some cases it has key/value pairs.

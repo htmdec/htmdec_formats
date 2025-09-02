@@ -32,7 +32,7 @@ jobs:
       uses: actions/cache@v4
       with:
         path: .tox
-        key: ${{ matrix.python-version }}-tox-${{ hashFiles('pyproject.toml', 'requirements-dev.txt') }}
+        key: ${{ matrix.python-version }}-tox-${{ hashFiles('pyproject.toml', 'requirements_dev.txt') }}
     - name: Run Linter
       run: tox -e lint
     - name: Run Tests
