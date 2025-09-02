@@ -4,8 +4,7 @@
 
 import pytest
 
-
-from htmdec_formats import htmdec_formats
+# from htmdec_formats import htmdec_formats
 
 
 @pytest.fixture

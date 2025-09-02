@@ -1,37 +1,38 @@
 """Main module."""
 
-import sys
 import itertools
+import sys
 
 try:
     from .ksy_files.nmdfile import Nmdfile as KaitaiNmdfile
-    from .ksy_files.simple_xls import SimpleXls
 except ImportError as e:
     print(f"Error: {e}")
     print("Please run 'make install' to install the necessary dependencies.")
     sys.exit(1)
 
-from .utils.convert import (
-    export_results_to_xlsx,
-    export_inputs_to_xlsx,
-    export_summary_to_xlsx,
-    export_test_to_xlsx,
-)
+import base64
+import xml.etree.ElementTree as ET
+
+import numpy as np
+import pandas as pd
+import xlsxwriter
+
 from .indenter_types import (
-    IndenterVar,
-    IndenterTestInput,
     IndenterCalculation,
-    IndenterSyschannel,
     IndenterChannel,
     IndenterChannelBins,
     IndenterSample,
+    IndenterSyschannel,
+    IndenterTestInput,
+    IndenterVar,
     cast_to_dataclass,
 )
-import pandas as pd
-import numpy as np
-import xlsxwriter
-import xml.etree.ElementTree as ET
-import base64
+from .utils.convert import (
+    export_inputs_to_xlsx,
+    export_results_to_xlsx,
+    export_summary_to_xlsx,
+    export_test_to_xlsx,
+)
 
 
 class XmlDummy:

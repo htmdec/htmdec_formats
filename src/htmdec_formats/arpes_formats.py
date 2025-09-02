@@ -11,12 +11,12 @@ except ImportError as e:
     print("Please run 'make install' to install the necessary dependencies.")
     sys.exit(1)
 
+import configparser
+import io
+import re
+
 import numpy as np
 import pandas as pd
-from typing import Optional
-import configparser
-import re
-import io
 
 
 class ARPESDataset:
@@ -60,7 +60,9 @@ class ARPESDataset:
         # \v , which is used as a delimiter in the metadata.
         # This is not ideal, so we go back in and fix it up.
         metadata_split = re.split("\n|\r", md)
-        self._metadata = "\n".join([line for line in metadata_split if "\x0b" not in line])
+        self._metadata = "\n".join(
+            [line for line in metadata_split if "\x0b" not in line]
+        )
         self.metadata = configparser.ConfigParser(delimiters=["=", chr(0x0b)])
         self.metadata.read_string(self._metadata)
         # We have avoided having the run mode information in the metadata here
@@ -69,9 +71,7 @@ class ARPESDataset:
         # turn that into usable information.
         rmi_string = "\n".join(line for line in metadata_split if "\x0b" in line)
         if len(rmi_string.strip()) > 0:
-            self.run_mode_info = pd.read_csv(
-                io.StringIO(rmi_string), sep="\x0b"
-            )
+            self.run_mode_info = pd.read_csv(io.StringIO(rmi_string), sep="\x0b")
         else:
             self.run_mode_info = pd.DataFrame()
 
